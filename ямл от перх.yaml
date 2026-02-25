@@ -1,0 +1,51 @@
+port: 7890
+socks-port: 7891
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+
+# --- ПРОКСИ ИСТОЧНИКИ ---
+proxy-providers:
+  vless_servers:
+    type: file
+    path: ./proxies.yaml
+    interval: 3600
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300
+
+# --- ГРУППЫ ПРОКСИ ---
+proxy-groups:
+  - name: "🚀 Авто-выбор"
+    type: url-test
+    use:
+      - vless_servers
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+
+  - name: "🔰 Выбор вручную"
+    type: select
+    proxies:
+      - "🚀 Авто-выбор"
+      - DIRECT
+    use:
+      - vless_servers
+
+# --- ПРОВАЙДЕРЫ ПРАВИЛ (CIDR РФ) ---
+rule-providers:
+  russia_white_list:
+    type: http
+    behavior: ipcidr
+    url: "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/main/white-lists/white-cidr-ru.txt"
+    path: ./ruleset/russia_white_list.yaml
+    interval: 86400
+
+# --- ПРАВИЛА ---
+rules:
+  # если CN не нужен — удали строчку
+  - GEOIP,CN,DIRECT
+  - RULE-SET,russia_white_list,DIRECT
+  - MATCH,🔰 Выбор вручную
